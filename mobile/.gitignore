@@ -1,0 +1,29 @@
+# Expo
+.expo/
+dist/
+web-build/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Native
+*.jks
+*.p12
+*.key
+*.mobileprovision
+
+# MacOS
+.DS_Store
+
+# Android/Google
+android/
+ios/
+# Note: If you are NOT using specific native code (Prebuild), you might want to ignore android/ and ios/ folders if they are generated. 
+# If you ARE using continuous native generation (CNG), ignored is correct. 
+# If you have ejected or have custom native code, you should NOT ignore them (but ignore build folders inside them).
+# Assuming standard managed/CNG workflow since no android/ios folders were visible in previous ls (only 10 children, likely source files).
+
+# Metro
+.metro-health-check

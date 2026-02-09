@@ -24,6 +24,7 @@ coverage/
 
 # Secrets
 firebase-service-account.json
+service-account.json
 
 # Editors
 .vscode/

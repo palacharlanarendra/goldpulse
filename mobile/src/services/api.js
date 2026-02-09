@@ -18,7 +18,7 @@ const getBaseUrl = () => {
     }
 
     // 3. Default Production URL (Replace this with your actual Render/Heroku URL once deployed)
-    return 'https://goldpulse-backend.onrender.com';
+    return 'https://goldpulse-674o.onrender.com';
 };
 
 const API_URL = getBaseUrl();

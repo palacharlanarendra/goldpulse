@@ -41,7 +41,7 @@ export default function SetAlertScreen({ deviceToken, onSuccess, onBack }) {
             if (err.message === 'ALERT_EXISTS') {
                 setError('You already have an active alert.');
             } else {
-                setError('Failed to create alert. Try again.');
+                setError(`Failed: ${err.message}`);
             }
         } finally {
             setLoading(false);
@@ -60,10 +60,12 @@ export default function SetAlertScreen({ deviceToken, onSuccess, onBack }) {
             </View>
 
             <View style={styles.content}>
-                <Text style={styles.title}>Set Price Alert</Text>
+                <Text style={styles.title}>Set Price Alert v2.0</Text>
                 <Text style={styles.subtitle}>
                     Current Price: ₹{currentPrice ? Math.round(currentPrice).toLocaleString() : '...'}
                 </Text>
+
+
 
                 <View style={styles.inputContainer}>
                     <Text style={styles.currencySymbol}>₹</Text>

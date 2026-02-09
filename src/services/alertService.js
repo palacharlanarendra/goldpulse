@@ -40,13 +40,17 @@ async function createAlert(userId, targetPrice, currentPrice) {
     }
 
     // Determine direction
-    // If target > current, we wait for price to go ABOVE.
-    // If target < current, we wait for price to go BELOW.
-    // Default to BELOW if currentPrice is unknown (safety).
     let direction = 'BELOW';
-    if (currentPrice && targetPrice > currentPrice) {
+
+    // Safety: ensure numbers
+    const target = parseFloat(targetPrice);
+    const current = currentPrice ? parseFloat(currentPrice) : null;
+
+    if (current && target > current) {
         direction = 'ABOVE';
     }
+
+    console.log(`Creating Alert: Target=${target}, Current=${current}, Direction=${direction}`);
 
     // Create alert
     const insertRes = await db.query(

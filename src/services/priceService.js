@@ -194,12 +194,35 @@ async function fetchAndStorePrice() {
     }
 }
 
-// Get from cache
+// Get from cache (Synchronous)
 function getLatestPrice() {
     return latestPriceCache;
 }
 
+/**
+ * Get current price, falling back to DB if cache is empty
+ */
+async function getCurrentPrice() {
+    if (latestPriceCache.price) {
+        return latestPriceCache.price;
+    }
+
+    try {
+        const result = await db.query('SELECT price FROM price_snapshots ORDER BY fetched_at DESC LIMIT 1');
+        if (result.rows.length > 0) {
+            const price = parseFloat(result.rows[0].price);
+            // Hydrate cache
+            latestPriceCache.price = price;
+            return price;
+        }
+    } catch (err) {
+        console.error('DB Read Error in getCurrentPrice:', err);
+    }
+    return null;
+}
+
 module.exports = {
     fetchAndStorePrice,
-    getLatestPrice
+    getLatestPrice,
+    getCurrentPrice
 };

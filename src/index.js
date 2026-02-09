@@ -80,8 +80,7 @@ app.post('/alerts', async (req, res) => {
         const userId = await alertService.createOrGetUser(device_token);
 
         // Fetch current price to determine direction
-        const priceData = priceService.getLatestPrice();
-        const currentPrice = priceData.price || null;
+        const currentPrice = await priceService.getCurrentPrice();
 
         const alert = await alertService.createAlert(userId, target_price, currentPrice);
 

@@ -1,0 +1,32 @@
+-- Schema inferred from application code
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    device_token TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS price_snapshots (
+    id SERIAL PRIMARY KEY,
+    metal VARCHAR(50) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    fetched_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS alerts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    metal VARCHAR(50) DEFAULT 'gold',
+    target_price NUMERIC(10, 2) NOT NULL,
+    direction VARCHAR(10) CHECK (direction IN ('ABOVE', 'BELOW')),
+    active BOOLEAN DEFAULT TRUE,
+    triggered BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS alert_triggers (
+    id SERIAL PRIMARY KEY,
+    alert_id INTEGER REFERENCES alerts(id) ON DELETE CASCADE,
+    triggered_price NUMERIC(10, 2) NOT NULL,
+    triggered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

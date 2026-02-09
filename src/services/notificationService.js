@@ -1,46 +1,13 @@
-const admin = require('firebase-admin');
+const { Expo } = require('expo-server-sdk');
 require('dotenv').config();
 
-// Initialize Firebase Admin SDK
-// Uses 'GOOGLE_APPLICATION_CREDENTIALS' env var or explicit service account path/json
-try {
-    let serviceAccount;
-
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-        // Option 1: JSON content in ENV
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        // Option 2: File path in ENV (Explicitly load it to sanitize key)
-        const path = require('path');
-        // Resolve path relative to CWD
-        const credPath = path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-        serviceAccount = require(credPath);
-    }
-
-    if (serviceAccount) {
-        // SANITIZATION: Fix private_key formatting if needed
-        // Sometimes \\n comes in as literal characters instead of newlines
-        if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
-            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-        }
-
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        console.log('Firebase Admin Initialized (with credentials)');
-    } else {
-        // Option 3: Default ADC (Application Default Credentials)
-        admin.initializeApp();
-        console.log('Firebase Admin Initialized (ADC)');
-    }
-} catch (error) {
-    console.error('Firebase Initialization Error:', error.message);
-}
+// Initialize Expo SDK
+const expo = new Expo();
 
 /**
- * Send a push notification to a specific device
+ * Send a push notification to a specific device using Expo Push API
  * @param {string} deviceToken 
- * @param {object} payload { title, body }
+ * @param {object} payload { title, body, data }
  */
 async function sendAlertNotification(deviceToken, payload) {
     if (!deviceToken) {
@@ -48,29 +15,47 @@ async function sendAlertNotification(deviceToken, payload) {
         return;
     }
 
-    const message = {
-        token: deviceToken,
-        notification: {
-            title: payload.title,
-            body: payload.body,
-        },
-        android: {
-            priority: 'high',
-        },
-        apns: {
-            payload: {
-                aps: {
-                    sound: 'default',
-                },
-            },
-        },
-    };
+    // Check if the token is a valid Expo push token
+    if (!Expo.isExpoPushToken(deviceToken)) {
+        console.error(`Push token ${deviceToken} is not a valid Expo push token`);
+        return;
+    }
+
+    const messages = [];
+    messages.push({
+        to: deviceToken,
+        sound: 'default',
+        title: payload.title,
+        body: payload.body,
+        data: payload.data || {},
+    });
 
     try {
-        const response = await admin.messaging().send(message);
-        console.log('Notification sent successfully:', response);
+        const chunks = expo.chunkPushNotifications(messages);
+        const tickets = [];
+
+        for (const chunk of chunks) {
+            try {
+                const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+                console.log('Notification Ticket Chunk:', ticketChunk);
+                tickets.push(...ticketChunk);
+            } catch (error) {
+                console.error('Error sending notification chunk:', error);
+            }
+        }
+
+        // Optional: specific error handling for tickets
+        // The tickets contain information whether the push was successfully delivered to Expo service
+        tickets.forEach((ticket) => {
+            if (ticket.status === 'error') {
+                console.error(`Error sending notification: ${ticket.message}`);
+                if (ticket.details && ticket.details.error) {
+                    console.error(`Error details: ${ticket.details.error}`);
+                }
+            }
+        });
+
     } catch (error) {
-        // Fail silently as per requirements "Fail silently if notification fails"
         console.error('Error sending notification:', error.message);
     }
 }

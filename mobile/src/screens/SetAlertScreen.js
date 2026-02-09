@@ -17,21 +17,16 @@ export default function SetAlertScreen({ deviceToken, onSuccess, onBack }) {
     const isValid = () => {
         const val = parseInt(targetPrice);
         if (isNaN(val)) return false;
-        if (val < 10000) return false;
-        // if (currentPrice && val >= currentPrice) return false; <-- Removed to allow upper alerts
+        if (val <= 0) return false; // Basic sanity check
         return true;
     };
 
     const getHelperText = () => {
         if (!targetPrice) return 'Enter target price.';
         const val = parseInt(targetPrice);
-        if (val < 10000) return 'Must be above ₹10,000.';
+        if (val <= 0) return 'Enter a valid price.';
 
-        if (currentPrice) {
-            if (val > currentPrice) return 'Alert when price RISES ABOVE this amount.';
-            if (val < currentPrice) return 'Alert when price DROPS BELOW this amount.';
-        }
-        return 'Alert will trigger when price reaches this amount.';
+        return 'You will be notified on the next price update.';
     };
 
     const handleSubmit = async () => {

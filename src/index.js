@@ -1,4 +1,4 @@
-// src/index.js
+// src/index.js - forceful restart
 // Main application entry point
 // Sets up Express server, middleware, and routes.
 

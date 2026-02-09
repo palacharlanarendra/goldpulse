@@ -80,36 +80,28 @@ async function evaluateAlerts(latestPrice) {
     console.log(`Evaluating alerts for price: ${latestPrice}`);
 
     // Find all eligible alerts
-    // Condition 1 (BELOW): active, not triggered, BELOW, and target_price >= latestPrice (Price dropped to target)
-    // Condition 2 (ABOVE): active, not triggered, ABOVE, and target_price <= latestPrice (Price rose to target)
+    // Modified to trigger for ANY price as requested
     const findQuery = `
         SELECT id, user_id, target_price, direction 
         FROM alerts 
         WHERE active = true 
           AND triggered = false 
-          AND metal = 'gold' 
-          AND (
-            (direction = 'BELOW' AND target_price >= $1)
-            OR
-            (direction = 'ABOVE' AND target_price <= $1)
-          )
+          AND metal = 'gold'
     `;
 
     try {
-        const { rows } = await db.query(findQuery, [latestPrice]);
+        const { rows } = await db.query(findQuery); // No params needed now
 
         if (rows.length === 0) {
             console.log('No alerts triggered.');
             return;
         }
 
-        console.log(`Triggering ${rows.length} alerts...`);
+        console.log(`Triggering ${rows.length} alerts (ANY price)...`);
 
-        // Process each alert using a transaction or batch
-        // For simplicity and safety, we process one by one
+        // Process each alert
         for (const alert of rows) {
-            // Mark as triggered FIRST to be safe (or do inside transaction)
-            // We'll update the alert row
+            // Mark as triggered FIRST
             const updateQuery = `
                 UPDATE alerts 
                 SET triggered = true, active = false 
@@ -131,14 +123,11 @@ async function evaluateAlerts(latestPrice) {
                     // Fetch device token
                     const userRes = await db.query('SELECT device_token FROM users WHERE id = $1', [alert.user_id]);
                     if (userRes.rows.length > 0) {
-                        // Verify token format/validity? Alert service trusts stored tokens.
                         const deviceToken = userRes.rows[0].device_token;
-
-                        const verb = alert.direction === 'ABOVE' ? 'risen to' : 'dropped below';
 
                         await notificationService.sendAlertNotification(deviceToken, {
                             title: 'Gold Price Alert',
-                            body: `Gold price has ${verb} ₹${alert.target_price}. Current: ₹${latestPrice.toFixed(2)}`
+                            body: `Price Update! Target: ₹${alert.target_price}. Current: ₹${latestPrice.toFixed(2)}`
                         });
                     }
                 } catch (notifErr) {

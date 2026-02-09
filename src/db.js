@@ -9,9 +9,8 @@ const { Pool } = require('pg');
 // SSL is enabled with 'rejectUnauthorized: false' for Render compatibility
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  // SSL is enabled only if explicitly configured or for production-like environments
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
 module.exports = {

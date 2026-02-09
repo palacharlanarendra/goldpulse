@@ -101,37 +101,56 @@ async function evaluateAlerts(latestPrice) {
 
         // Process each alert
         for (const alert of rows) {
-            // Mark as triggered FIRST
-            const updateQuery = `
-                UPDATE alerts 
-                SET triggered = true, active = false 
-                WHERE id = $1 AND triggered = false
-                RETURNING id
-             `;
-            const updateRes = await db.query(updateQuery, [alert.id]);
+            let shouldTrigger = false;
+            const target = parseFloat(alert.target_price);
 
-            if (updateRes.rows.length > 0) {
-                // Insert trigger log
-                await db.query(
-                    'INSERT INTO alert_triggers (alert_id, triggered_price, triggered_at) VALUES ($1, $2, NOW())',
-                    [alert.id, latestPrice]
-                );
-                console.log(`Alert ${alert.id} triggered at price ${latestPrice}`);
+            // LOGIC: Check direction
+            if (alert.direction === 'ABOVE') {
+                // Trigger if price rises AT or ABOVE target
+                if (latestPrice >= target) {
+                    shouldTrigger = true;
+                }
+            } else {
+                // BELOW (Default)
+                // Trigger if price drops AT or BELOW target
+                if (latestPrice <= target) {
+                    shouldTrigger = true;
+                }
+            }
 
-                // Send Push Notification
-                try {
-                    // Fetch device token
-                    const userRes = await db.query('SELECT device_token FROM users WHERE id = $1', [alert.user_id]);
-                    if (userRes.rows.length > 0) {
-                        const deviceToken = userRes.rows[0].device_token;
+            if (shouldTrigger) {
+                // Mark as triggered FIRST
+                const updateQuery = `
+                    UPDATE alerts 
+                    SET triggered = true, active = false 
+                    WHERE id = $1 AND triggered = false
+                    RETURNING id
+                 `;
+                const updateRes = await db.query(updateQuery, [alert.id]);
 
-                        await notificationService.sendAlertNotification(deviceToken, {
-                            title: 'Gold Price Alert',
-                            body: `Price Update! Target: ₹${alert.target_price}. Current: ₹${latestPrice.toFixed(2)}`
-                        });
+                if (updateRes.rows.length > 0) {
+                    // Insert trigger log
+                    await db.query(
+                        'INSERT INTO alert_triggers (alert_id, triggered_price, triggered_at) VALUES ($1, $2, NOW())',
+                        [alert.id, latestPrice]
+                    );
+                    console.log(`Alert ${alert.id} triggered! Target: ${target}, Current: ${latestPrice}`);
+
+                    // Send Push Notification
+                    try {
+                        // Fetch device token
+                        const userRes = await db.query('SELECT device_token FROM users WHERE id = $1', [alert.user_id]);
+                        if (userRes.rows.length > 0) {
+                            const deviceToken = userRes.rows[0].device_token;
+
+                            await notificationService.sendAlertNotification(deviceToken, {
+                                title: `🔔 Gold Alert: ₹${latestPrice.toFixed(2)}`,
+                                body: `Your target of ₹${target} has been reached!`
+                            });
+                        }
+                    } catch (notifErr) {
+                        console.error('Notification failed:', notifErr);
                     }
-                } catch (notifErr) {
-                    console.error('Notification failed:', notifErr);
                 }
             }
         }

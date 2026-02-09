@@ -12,12 +12,8 @@ const getBaseUrl = () => {
     const manifestUrl = Constants.expoConfig?.extra?.apiUrl;
     if (manifestUrl) return manifestUrl;
 
-    // 2. Fallback for Development
-    if (__DEV__) {
-        return Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-    }
-
-    // 3. Default Production URL (Replace this with your actual Render/Heroku URL once deployed)
+    // 3. Defaults
+    // FORCE Production URL (User Request: "Apk file point to this backend only")
     return 'https://goldpulse-674o.onrender.com';
 };
 

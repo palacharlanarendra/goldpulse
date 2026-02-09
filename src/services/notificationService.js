@@ -1,11 +1,37 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../../service-account.json');
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
+    let credential = null;
+
+    // 1. Try Environment Variable (Production/Render)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            credential = admin.credential.cert(serviceAccount);
+            console.log('Firebase: Initialized with Environment Variable');
+        } catch (error) {
+            console.error('Firebase: Failed to parse FIREBASE_SERVICE_ACCOUNT env var', error);
+        }
+    }
+
+    // 2. Try Local File (Development)
+    if (!credential) {
+        try {
+            const serviceAccount = require('../../service-account.json');
+            credential = admin.credential.cert(serviceAccount);
+            console.log('Firebase: Initialized with local file');
+        } catch (error) {
+            console.warn('Firebase: Local service-account.json not found. (Expected in production if using env vars)');
+        }
+    }
+
+    // 3. Initialize
+    if (credential) {
+        admin.initializeApp({ credential });
+    } else {
+        console.error('FIREBASE ERROR: No credentials found! Notifications will fail.');
+    }
 }
 
 /**

@@ -56,8 +56,9 @@ async function sendAlertNotification(deviceToken, payload) {
         android: {
             priority: 'high',
             notification: {
-                sound: 'default',
-                channelId: 'default',
+                channelId: 'default', // Must match the channel created in the App
+                priority: 'high',
+                defaultSound: true,
             },
         },
     };

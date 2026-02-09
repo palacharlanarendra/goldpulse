@@ -1,6 +1,6 @@
 // mobile/src/screens/HomeScreen.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView, FlatList, Image } from 'react-native';
 import { getLatestPrice, getUserAlerts } from '../services/api';
 
 export default function HomeScreen({ onSetAlert, deviceToken }) {
@@ -57,6 +57,11 @@ export default function HomeScreen({ onSetAlert, deviceToken }) {
             }
         >
             <View style={styles.header}>
+                <Image
+                    source={require('../../assets/logo.png')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
                 <Text style={styles.appTitle}>GoldPulse</Text>
             </View>
 
@@ -111,6 +116,11 @@ const styles = StyleSheet.create({
         marginTop: 60,
         marginBottom: 40,
         alignItems: 'center',
+    },
+    logo: {
+        width: 120,
+        height: 120,
+        marginBottom: 16,
     },
     appTitle: {
         fontSize: 20,

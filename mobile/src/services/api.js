@@ -61,9 +61,8 @@ export const createAlert = async (deviceToken, targetPrice) => {
         });
         return handleResponse(response);
     } catch (error) {
-        // Handle 409 Conflict specifically
         if (error.status === 409) {
-            throw new Error('ALERT_EXISTS');
+            throw new Error('DUPLICATE_ALERT');
         }
         console.error('API Error (createAlert):', error);
         throw error;

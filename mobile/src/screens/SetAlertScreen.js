@@ -38,8 +38,8 @@ export default function SetAlertScreen({ deviceToken, onSuccess, onBack }) {
             const result = await createAlert(deviceToken, parseInt(targetPrice));
             onSuccess(result);
         } catch (err) {
-            if (err.message === 'ALERT_EXISTS') {
-                setError('You already have an active alert.');
+            if (err.message === 'DUPLICATE_ALERT') {
+                setError('You already have an active alert for this price.');
             } else {
                 setError(`Failed: ${err.message}`);
             }

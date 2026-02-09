@@ -91,7 +91,7 @@ app.post('/alerts', async (req, res) => {
             target_price: alert.target_price
         });
     } catch (err) {
-        if (err.code === 'ALERT_EXISTS') {
+        if (err.code === 'DUPLICATE_ALERT') {
             return res.status(409).json({ status: 'error', message: err.message });
         }
         console.error('Create alert error:', err);

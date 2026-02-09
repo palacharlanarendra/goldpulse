@@ -47,7 +47,7 @@ export default function App() {
             target_price: alertData.target_price,
             triggered: false
         });
-        setCurrentScreen('STATUS');
+        setCurrentScreen('HOME');
     };
 
     if (currentScreen === 'LOADING') {

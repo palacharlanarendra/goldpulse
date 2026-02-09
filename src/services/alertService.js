@@ -27,15 +27,15 @@ async function createOrGetUser(deviceToken) {
  * Rules: Only one active/untriggered alert per user allowed for simplicty as per reqs
  */
 async function createAlert(userId, targetPrice, currentPrice) {
-    // Check for existing active, untriggered alert
+    // Check for existing active, untriggered alert with SAME target price
     const checkRes = await db.query(
-        'SELECT id FROM alerts WHERE user_id = $1 AND active = true AND triggered = false',
-        [userId]
+        'SELECT id FROM alerts WHERE user_id = $1 AND target_price = $2 AND active = true AND triggered = false',
+        [userId, targetPrice]
     );
 
     if (checkRes.rows.length > 0) {
-        const error = new Error('User already has an active alert');
-        error.code = 'ALERT_EXISTS';
+        const error = new Error('Alert for this price already active');
+        error.code = 'DUPLICATE_ALERT';
         throw error;
     }
 

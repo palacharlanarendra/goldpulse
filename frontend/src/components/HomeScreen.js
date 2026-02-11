@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image, SafeAreaView } from 'react-native';
 import AlertStatus from './AlertStatus';
 
 const HomeScreen = ({
     priceData,
-    activeAlerts, // Changed from activeAlert
+    activeAlerts,
     loading,
     onRefresh,
     onSetAlert,
@@ -13,82 +13,99 @@ const HomeScreen = ({
     const currentPrice = priceData?.price;
 
     return (
-        <ScrollView
-            contentContainerStyle={styles.container}
-            refreshControl={
-                <RefreshControl refreshing={loading} onRefresh={onRefresh} />
-            }
-        >
-            <View style={styles.header}>
-                {/* Placeholder for Logo */}
-                <View style={styles.logoPlaceholder} />
-                <Text style={styles.appName}>GoldPulse</Text>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.fixedHeader}>
+                <View style={styles.logoRow}>
+                    <Image
+                        source={require('../assets/logo.png')}
+                        style={styles.logo}
+                    />
+                    <Text style={styles.appName}>GoldPulse</Text>
+                </View>
+
+                <View style={styles.priceContainer}>
+                    <Text style={styles.price}>
+                        {currentPrice
+                            ? `₹${currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 })} / g`
+                            : '---'}
+                    </Text>
+                    <Text style={styles.subtext}>24K Digital Gold · India</Text>
+                    <Text style={styles.caption}>Indicative price · Updates every 5 minutes</Text>
+                </View>
+
+                <View style={styles.actionContainer}>
+                    <TouchableOpacity style={styles.setAlertButton} onPress={onSetAlert}>
+                        <Text style={styles.setAlertText}>+ Set New Alert</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <Text style={styles.sectionTitle}>Your Alerts</Text>
             </View>
 
-            <View style={styles.priceContainer}>
-                <Text style={styles.price}>
-                    {currentPrice ? `₹${currentPrice.toLocaleString('en-IN')} / g` : '---'}
-                </Text>
-                <Text style={styles.subtext}>24K Digital Gold · India</Text>
-                <Text style={styles.caption}>Indicative price · Updates every 5 minutes</Text>
-            </View>
-
-            <View style={styles.actionContainer}>
-                <TouchableOpacity style={styles.setAlertButton} onPress={onSetAlert}>
-                    <Text style={styles.setAlertText}>+ Set New Alert</Text>
-                </TouchableOpacity>
-            </View>
-
-            <Text style={styles.sectionTitle}>Your Alerts</Text>
-
-            <View style={styles.alertSection}>
-                {activeAlerts && activeAlerts.length > 0 ? (
-                    activeAlerts.map((alert) => (
-                        <AlertStatus
-                            key={alert.id}
-                            alert={alert}
-                            currentPrice={currentPrice}
-                            onCancel={onCancelAlert} // This now expects ID
-                            onSetNew={onSetAlert}
-                        />
-                    ))
-                ) : (
-                    <View style={styles.emptyAlert}>
-                        <Text style={styles.emptyText}>No active alerts</Text>
-                    </View>
-                )}
-            </View>
-        </ScrollView>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+                }
+            >
+                <View style={styles.alertSection}>
+                    {activeAlerts && activeAlerts.length > 0 ? (
+                        activeAlerts.map((alert) => (
+                            <AlertStatus
+                                key={alert.id}
+                                alert={alert}
+                                currentPrice={currentPrice}
+                                onCancel={onCancelAlert}
+                                onSetNew={onSetAlert}
+                            />
+                        ))
+                    ) : (
+                        <View style={styles.emptyAlert}>
+                            <Text style={styles.emptyText}>No active alerts</Text>
+                        </View>
+                    )}
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flexGrow: 1,
-        padding: 20,
+    safeArea: {
+        flex: 1,
         backgroundColor: '#fff',
     },
-    header: {
-        marginTop: 20,
-        marginBottom: 30,
-        alignItems: 'center',
+    fixedHeader: {
+        paddingTop: 20,
+        paddingHorizontal: 20,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        paddingBottom: 10,
+        elevation: 2, // Slight shadow for fixed feel
+        zIndex: 10,
     },
-    logoPlaceholder: {
+    logoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
+    logo: {
         width: 40,
         height: 40,
-        backgroundColor: '#FFD700',
-        borderRadius: 20,
-        marginBottom: 8,
+        resizeMode: 'contain',
+        marginRight: 10,
     },
     appName: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#1a1a1a',
         letterSpacing: 0.5,
     },
     priceContainer: {
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 20,
     },
     price: {
         fontSize: 42,
@@ -106,7 +123,7 @@ const styles = StyleSheet.create({
         color: '#999',
     },
     actionContainer: {
-        marginBottom: 20,
+        marginBottom: 15,
         alignItems: 'center',
     },
     setAlertButton: {
@@ -125,7 +142,12 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 10,
+        marginTop: 5,
+        marginBottom: 5,
+    },
+    scrollContent: {
+        padding: 20,
+        paddingTop: 10,
     },
     alertSection: {
         width: '100%',

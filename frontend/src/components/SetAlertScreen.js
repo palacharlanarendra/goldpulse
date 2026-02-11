@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 
 const SetAlertScreen = ({ currentPrice, onSubmit, onCancel, loading }) => {
     const [targetPrice, setTargetPrice] = useState('');
@@ -40,72 +40,86 @@ const SetAlertScreen = ({ currentPrice, onSubmit, onCancel, loading }) => {
         onSubmit(price, direction);
     };
 
+    const dismissKeyboard = () => {
+        Keyboard.dismiss();
+    };
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Set Price Alert</Text>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <TouchableWithoutFeedback onPress={dismissKeyboard}>
+                <View style={styles.innerContainer}>
+                    <Text style={styles.title}>Set Price Alert</Text>
 
-            <View style={styles.currentPriceContainer}>
-                <Text style={styles.label}>Current Price</Text>
-                <Text style={styles.currentPrice}>₹{currentPrice?.toLocaleString('en-IN')}</Text>
-            </View>
+                    <View style={styles.currentPriceContainer}>
+                        <Text style={styles.label}>Current Price</Text>
+                        <Text style={styles.currentPrice}>₹{currentPrice?.toLocaleString('en-IN')}</Text>
+                    </View>
 
-            <View style={styles.directionContainer}>
-                <Text style={styles.label}>Notify me when price goes</Text>
-                <View style={styles.toggleContainer}>
+                    <View style={styles.directionContainer}>
+                        <Text style={styles.label}>Notify me when price goes</Text>
+                        <View style={styles.toggleContainer}>
+                            <TouchableOpacity
+                                style={[styles.toggleButton, direction === 'BELOW' && styles.activeToggle]}
+                                onPress={() => setDirection('BELOW')}
+                            >
+                                <Text style={[styles.toggleText, direction === 'BELOW' && styles.activeToggleText]}>BELOW</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.toggleButton, direction === 'ABOVE' && styles.activeToggle]}
+                                onPress={() => setDirection('ABOVE')}
+                            >
+                                <Text style={[styles.toggleText, direction === 'ABOVE' && styles.activeToggleText]}>ABOVE</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <Text style={styles.inputLabel}>Target Price (₹)</Text>
+                    <TextInput
+                        style={styles.input}
+                        keyboardType="numeric"
+                        value={targetPrice}
+                        onChangeText={(text) => {
+                            setTargetPrice(text);
+                            setError('');
+                        }}
+                        placeholder="Enter amount"
+                        placeholderTextColor="#999"
+                    />
+
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+
                     <TouchableOpacity
-                        style={[styles.toggleButton, direction === 'BELOW' && styles.activeToggle]}
-                        onPress={() => setDirection('BELOW')}
+                        style={[styles.button, loading && styles.disabled]}
+                        onPress={handleCreate}
+                        disabled={loading}
                     >
-                        <Text style={[styles.toggleText, direction === 'BELOW' && styles.activeToggleText]}>BELOW</Text>
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Create Alert</Text>
+                        )}
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.toggleButton, direction === 'ABOVE' && styles.activeToggle]}
-                        onPress={() => setDirection('ABOVE')}
-                    >
-                        <Text style={[styles.toggleText, direction === 'ABOVE' && styles.activeToggleText]}>ABOVE</Text>
+
+                    <TouchableOpacity style={styles.cancelButton} onPress={onCancel} disabled={loading}>
+                        <Text style={styles.cancelText}>Cancel</Text>
                     </TouchableOpacity>
                 </View>
-            </View>
-
-            <Text style={styles.inputLabel}>Target Price (₹)</Text>
-            <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={targetPrice}
-                onChangeText={(text) => {
-                    setTargetPrice(text);
-                    setError('');
-                }}
-                placeholder="Enter amount"
-                placeholderTextColor="#999"
-            />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <TouchableOpacity
-                style={[styles.button, loading && styles.disabled]}
-                onPress={handleCreate}
-                disabled={loading}
-            >
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.buttonText}>Create Alert</Text>
-                )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel} disabled={loading}>
-                <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-        </View>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
         backgroundColor: '#fff',
+    },
+    innerContainer: {
+        flex: 1,
+        padding: 20,
         justifyContent: 'center',
     },
     title: {

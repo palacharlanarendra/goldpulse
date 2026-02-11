@@ -74,7 +74,7 @@ async function createAlert(userId, targetPrice, currentPrice, explicitDirection 
  */
 async function getUserAlerts(userId) {
     const res = await db.query(
-        'SELECT id, target_price, direction, triggered, created_at FROM alerts WHERE user_id = $1 ORDER BY created_at DESC',
+        "SELECT id, target_price, direction, triggered, created_at FROM alerts WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours' ORDER BY created_at DESC",
         [userId]
     );
     return res.rows;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 
 const AlertStatus = ({ alert, currentPrice, onCancel, onSetNew }) => {
     const [loading, setLoading] = useState(false);
@@ -9,7 +9,23 @@ const AlertStatus = ({ alert, currentPrice, onCancel, onSetNew }) => {
     const isTriggered = alert.triggered;
     const direction = alert.direction || 'BELOW';
 
-    const handleCancel = async () => {
+    const handleCancel = () => {
+        if (isTriggered) {
+            // For triggered alerts, just remove them without scary confirmation
+            performCancel();
+        } else {
+            Alert.alert(
+                "Delete Alert?",
+                "Are you sure you want to delete this alert?",
+                [
+                    { text: "No", style: "cancel" },
+                    { text: "Yes, Delete", style: "destructive", onPress: performCancel }
+                ]
+            );
+        }
+    };
+
+    const performCancel = async () => {
         setLoading(true);
         await onCancel(alert.id);
         setLoading(false);
@@ -20,7 +36,7 @@ const AlertStatus = ({ alert, currentPrice, onCancel, onSetNew }) => {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.label}>Target Price ({direction})</Text>
-                    <Text style={styles.price}>₹{alert.target_price.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.price}>₹{alert.target_price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
                 </View>
                 {/* 
                   Optional: Display direction icon or text clearly. 
@@ -36,7 +52,7 @@ const AlertStatus = ({ alert, currentPrice, onCancel, onSetNew }) => {
 
             <Text style={styles.message}>
                 {isTriggered
-                    ? `Price reached target ${direction.toLowerCase()} ₹${alert.target_price}`
+                    ? `Price reached target ${direction.toLowerCase()} ₹${Number(alert.target_price).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
                     : `You'll be notified when price goes ${direction.toLowerCase()}`}
             </Text>
 

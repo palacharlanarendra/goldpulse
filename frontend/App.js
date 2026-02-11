@@ -3,7 +3,7 @@ import { SafeAreaView, StatusBar, StyleSheet, Alert, View, ActivityIndicator } f
 import HomeScreen from './src/components/HomeScreen';
 import SetAlertScreen from './src/components/SetAlertScreen';
 import { getLatestPrice, createAlert, getAlerts, deleteAlert } from './src/services/api';
-import { requestUserPermission, getFCMToken, onMessageListener } from './src/services/notifications';
+import { requestUserPermission, getFCMToken, createNotificationListeners } from './src/services/notifications';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('HOME'); // HOME, SET_ALERT
@@ -51,7 +51,8 @@ const App = () => {
 
   useEffect(() => {
     init();
-    const unsubscribe = onMessageListener();
+    // Setup all notification listeners
+    const unsubscribe = createNotificationListeners();
     return () => {
       unsubscribe();
     };

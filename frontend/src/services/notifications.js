@@ -28,17 +28,38 @@ export const getFCMToken = async () => {
     }
 };
 
-export const onMessageListener = () => {
-    return messaging().onMessage(async remoteMessage => {
-        console.log('A new FCM message arrived!', JSON.stringify(remoteMessage));
-
-        // Show an Alert in Foreground
-        if (remoteMessage.notification) {
-            Alert.alert(
-                remoteMessage.notification.title || 'New Alert',
-                remoteMessage.notification.body || '',
-                [{ text: 'OK' }]
-            );
-        }
+export const createNotificationListeners = () => {
+    // 1. Foreground Message Handler
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+        console.log('Foreground Message:', JSON.stringify(remoteMessage));
+        Alert.alert(
+            remoteMessage.notification?.title || 'New Alert',
+            remoteMessage.notification?.body || '',
+            [{ text: 'OK', onPress: () => console.log('OK Pressed') }]
+        );
     });
+
+    // 2. Background -> Open App Handler
+    messaging().onNotificationOpenedApp(remoteMessage => {
+        console.log('App opened from Background:', remoteMessage.notification);
+        Alert.alert(
+            remoteMessage.notification?.title || 'GoldPulse Alert',
+            remoteMessage.notification?.body || ''
+        );
+    });
+
+    // 3. Quit -> Open App Handler (Cold Start)
+    messaging()
+        .getInitialNotification()
+        .then(remoteMessage => {
+            if (remoteMessage) {
+                console.log('App opened from Quit state:', remoteMessage.notification);
+                Alert.alert(
+                    remoteMessage.notification?.title || 'GoldPulse Alert',
+                    remoteMessage.notification?.body || ''
+                );
+            }
+        });
+
+    return unsubscribe;
 };

@@ -24,17 +24,28 @@ let exchangeRateCache = {
  * Scrape gold price in USD/oz or USD/g from a public source
  * Returns price in USD per GRAM
  */
-// List of User-Agents to rotate
+// Browser-like Header Generator to bypass 403s
 const USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
 ];
 
-function getRandomUserAgent() {
-    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+function getRandomHeaders(referer = 'https://www.google.com/') {
+    const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+    return {
+        'User-Agent': ua,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': referer,
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0'
+    };
 }
 
 /**
@@ -145,59 +156,48 @@ async function fetchGoldPriceUSD() {
  * "gold price today in india" usually gives 10g price or 1g price.
  */
 async function fetchGoldPriceINR_Google() {
-    try {
-        console.log('Attempting to fetch INR price from Google Search...');
-        const url = 'https://www.google.com/search?q=gold+price+today+in+india+per+gram';
-        const { data } = await axios.get(url, {
-            headers: {
-                'User-Agent': getRandomUserAgent(),
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-            },
-            timeout: 6000
-        });
+    const queries = ['gold+price+today+in+india+per+gram', 'gold+price+in+india'];
 
-        // Regex to find price in INR. e.g. "₹ 6,500", "6,500.00", "7,200", "Rs 6500"
+    for (const query of queries) {
+        try {
+            console.log(`Attempting to fetch INR price from Google Search (Query: ${query})...`);
+            const url = `https://www.google.com/search?q=${query}`;
+            const { data } = await axios.get(url, {
+                headers: getRandomHeaders('https://www.google.com/'),
+                timeout: 6000
+            });
 
-        const body = data;
-        // Search for "₹" or "Rs" or "INR" followed by digits/commas
-        const matches = [...body.matchAll(/(?:₹|Rs\.?|INR)\s?(\d{1,3}(?:,\d{2,3})*(?:\.\d+)?)/gi)];
+            const body = data;
+            const matches = [...body.matchAll(/(?:₹|Rs\.?|INR)\s?(\d{1,3}(?:,\d{2,3})*(?:\.\d+)?)/gi)];
 
-        let candidates = [];
-        for (const m of matches) {
-            const val = parseFloat(m[1].replace(/,/g, ''));
-            if (!isNaN(val)) candidates.push(val);
-        }
-
-        if (candidates.length === 0) {
-            console.log('Google Search: No currency matches found.');
-            // Limit log size and check type
-            const snippet = typeof body === 'string' ? body.substring(0, 500) : 'Body not string';
-            console.log('Snippet dump:', snippet);
-            return null;
-        }
-
-        // Calc: Heuristic to find best candidate.
-        // 1g is likely 5000-9000. 10g is 50000-90000.
-        // If we find a 10g price, divide by 10.
-
-        for (const price of candidates) {
-            if (price > 4000 && price < 10000) {
-                console.log(`Found 1g price candidate: ${price}`);
-                return price;
+            let candidates = [];
+            for (const m of matches) {
+                const val = parseFloat(m[1].replace(/,/g, ''));
+                if (!isNaN(val)) candidates.push(val);
             }
-            if (price > 40000 && price < 100000) {
-                console.log(`Found 10g price candidate: ${price}. Converting to 1g.`);
-                return price / 10;
+
+            if (candidates.length === 0) {
+                console.log(`Google Search (${query}): No currency matches found.`);
+                continue;
             }
+
+            for (const price of candidates) {
+                if (price > 4000 && price < 10000) {
+                    console.log(`Found 1g price candidate: ${price}`);
+                    return price;
+                }
+                if (price > 40000 && price < 100000) {
+                    console.log(`Found 10g price candidate: ${price}. Converting to 1g.`);
+                    return price / 10;
+                }
+            }
+
+        } catch (e) {
+            console.error(`Google Search scrape failed for query "${query}":`, e.message);
         }
-
-        return null;
-
-    } catch (e) {
-        console.error('Google Search scrape failed:', e.message);
-        return null;
     }
+
+    return null;
 }
 
 /**

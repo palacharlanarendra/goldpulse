@@ -1,1 +1,1 @@
-export const API_BASE_URL = 'https://goldpulse-674o.onrender.com'; // Production backend
+export const API_BASE_URL = 'https://goldpulse-ea7y.onrender.com'; // Production backend

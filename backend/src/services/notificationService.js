@@ -64,6 +64,10 @@ async function sendAlertNotification(deviceToken, payload) {
     };
 
     try {
+        if (!admin.apps.length) {
+            console.log('Mock Notification (No Credentials):', payload.title, '-', payload.body);
+            return;
+        }
         const response = await admin.messaging().send(message);
         console.log('Successfully sent message:', response);
     } catch (error) {

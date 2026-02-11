@@ -7,11 +7,17 @@ if (!admin.apps.length) {
     // 1. Try Environment Variable (Production/Render)
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
         try {
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            let envVar = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+            // FIX: Handle accidental surrounding quotes from copy-paste
+            if (envVar.startsWith("'") && envVar.endsWith("'")) {
+                envVar = envVar.slice(1, -1);
+            }
+            const serviceAccount = JSON.parse(envVar);
+
             // FIX: Replace escaped newlines with actual newlines
             if (serviceAccount.private_key) {
-                // Handle both passed-in literal newlines and escaped newlines
-                serviceAccount.private_key = serviceAccount.private_key.split(String.raw`\n`).join('\n');
+                // FIX: Replace double-escaped newlines with actual newlines
+                serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
             }
             credential = admin.credential.cert(serviceAccount);
             console.log('Firebase: Initialized with Environment Variable');

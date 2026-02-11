@@ -1,5 +1,5 @@
 import messaging from '@react-native-firebase/messaging';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform, Alert } from 'react-native';
 
 export const requestUserPermission = async () => {
     if (Platform.OS === 'android') {
@@ -31,8 +31,14 @@ export const getFCMToken = async () => {
 export const onMessageListener = () => {
     return messaging().onMessage(async remoteMessage => {
         console.log('A new FCM message arrived!', JSON.stringify(remoteMessage));
-        // Check if we need to show a local notification or just update UI
-        // For now, we rely on the backend sending a notification that system tray handles in background
-        // In foreground, we might want to alert the user or refresh data
+
+        // Show an Alert in Foreground
+        if (remoteMessage.notification) {
+            Alert.alert(
+                remoteMessage.notification.title || 'New Alert',
+                remoteMessage.notification.body || '',
+                [{ text: 'OK' }]
+            );
+        }
     });
 };

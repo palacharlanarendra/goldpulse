@@ -1,5 +1,4 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 const db = require('../db');
 const alertService = require('./alertService');
 
@@ -15,221 +14,6 @@ let exchangeRateCache = {
     rate: null,
     timestamp: 0
 };
-
-// disclaimer: Prices are indicative and informational only
-
-// disclaimer: Prices are indicative and informational only
-
-/**
- * Scrape gold price in USD/oz or USD/g from a public source
- * Returns price in USD per GRAM
- */
-// Browser-like Header Generator to bypass 403s
-const USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-];
-
-function getRandomHeaders(referer = 'https://www.google.com/') {
-    const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-    return {
-        'User-Agent': ua,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': referer,
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Cache-Control': 'max-age=0'
-    };
-}
-
-/**
- * Scrape gold price in USD/oz or USD/g from a public source
- * Returns price in USD per GRAM
- */
-async function fetchGoldPriceUSD() {
-    try {
-        // Primary Source: GoldPrice.org (HTML)
-        try {
-            const url = 'https://goldprice.org/spot-gold.html';
-            const { data } = await axios.get(url, {
-                headers: {
-                    'User-Agent': getRandomUserAgent(),
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Referer': 'https://goldprice.org/'
-                },
-                timeout: 5000
-            });
-
-            const $ = cheerio.load(data);
-            let priceText = $('span#formatted_price').text();
-            if (!priceText) {
-                const body = $('body').text();
-                const match = body.match(/Gold Price.*?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-                if (match) priceText = match[1];
-            }
-
-            if (priceText) {
-                const price = parseFloat(priceText.replace(/,/g, ''));
-                // Assuming price is per Ounce
-                return price / 31.1035;
-            }
-        } catch (e) {
-            console.log('Primary source (GoldPrice.org) failed:', e.message);
-        }
-
-        // Fallback Source 1: Bullion-Rates (HTML)
-        try {
-            const fallbackUrl = 'https://www.bullion-rates.com/gold/USD/spot-price.htm';
-            const { data: data2 } = await axios.get(fallbackUrl, {
-                headers: {
-                    'User-Agent': getRandomUserAgent()
-                },
-                timeout: 5000
-            });
-            const $2 = cheerio.load(data2);
-            const body2 = $2('body').text();
-            const matchFallback = body2.match(/Gold.*?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-            if (matchFallback) {
-                return parseFloat(matchFallback[1].replace(/,/g, '')) / 31.1035;
-            }
-        } catch (e) {
-            console.log('Fallback 1 (Bullion-Rates) failed:', e.message);
-        }
-
-        // Fallback Source 2: GoldPrice.org Data API (JSON)
-        try {
-            const jsonUrl = 'https://data-asg.goldprice.org/dbXRates/USD';
-            const { data: jsonData } = await axios.get(jsonUrl, {
-                headers: {
-                    'User-Agent': getRandomUserAgent()
-                }
-            });
-            if (jsonData.items && jsonData.items.length > 0) {
-                const item = jsonData.items[0];
-                if (item.xauPrice) {
-                    return item.xauPrice / 31.1035;
-                }
-            }
-        } catch (e) {
-            console.log('Fallback 2 (GoldPrice JSON) failed:', e.message);
-        }
-
-        // Fallback Source 3: LivePriceOfGold.com (HTML)
-        try {
-            const url3 = 'https://www.livepriceofgold.com/usa-gold-price.html';
-            const { data: data3 } = await axios.get(url3, {
-                headers: {
-                    'User-Agent': getRandomUserAgent()
-                },
-                timeout: 5000
-            });
-            const $3 = cheerio.load(data3);
-            // Select specific element if possible or regex body
-            const body3 = $3('body').text();
-            // Look for "Gold Price Per Ounce" ... number
-            const match3 = body3.match(/Gold Price Per Ounce.*?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
-            if (match3) {
-                return parseFloat(match3[1].replace(/,/g, '')) / 31.1035;
-            }
-        } catch (e) {
-            console.log('Fallback 3 (LivePriceOfGold) failed:', e.message);
-        }
-
-
-        return null; // Return null to trigger INR fallback in main function
-
-    } catch (error) {
-        console.error('Error fetching gold price:', error.message);
-        return null;
-    }
-}
-
-/**
- * Scrape INR price directly from Google Search
- * "gold price today in india" usually gives 10g price or 1g price.
- */
-async function fetchGoldPriceINR_Google() {
-    const queries = ['gold+price+today+in+india+per+gram', 'gold+price+in+india'];
-
-    for (const query of queries) {
-        try {
-            console.log(`Attempting to fetch INR price from Google Search (Query: ${query})...`);
-            const url = `https://www.google.com/search?q=${query}`;
-            const { data } = await axios.get(url, {
-                headers: getRandomHeaders('https://www.google.com/'),
-                timeout: 6000
-            });
-
-            const body = data;
-            const matches = [...body.matchAll(/(?:₹|Rs\.?|INR)\s?(\d{1,3}(?:,\d{2,3})*(?:\.\d+)?)/gi)];
-
-            let candidates = [];
-            for (const m of matches) {
-                const val = parseFloat(m[1].replace(/,/g, ''));
-                if (!isNaN(val)) candidates.push(val);
-            }
-
-            if (candidates.length === 0) {
-                console.log(`Google Search (${query}): No currency matches found.`);
-                continue;
-            }
-
-            for (const price of candidates) {
-                if (price > 4000 && price < 10000) {
-                    console.log(`Found 1g price candidate: ${price}`);
-                    return price;
-                }
-                if (price > 40000 && price < 100000) {
-                    console.log(`Found 10g price candidate: ${price}. Converting to 1g.`);
-                    return price / 10;
-                }
-            }
-
-        } catch (e) {
-            console.error(`Google Search scrape failed for query "${query}":`, e.message);
-        }
-    }
-
-    return null;
-}
-
-/**
- * Scrape INR price from GoodReturns.in (Backup)
- */
-async function fetchGoldPriceINR_GoodReturns() {
-    try {
-        console.log('Attempting to fetch INR price from GoodReturns...');
-        const url = 'https://www.goodreturns.in/gold-rates/india.html';
-        const { data } = await axios.get(url, {
-            headers: {
-                'User-Agent': getRandomUserAgent()
-            },
-            timeout: 6000
-        });
-
-        const $ = cheerio.load(data);
-        const bodyText = $('body').text().replace(/\s+/g, ' ');
-
-        // Regex: 24 Carat Gold ... 1 Gram ... ₹ 7,xxx
-        const match = bodyText.match(/24 Carat Gold.*?1 Gram.*?₹\s*([\d,]+)/i);
-        if (match) {
-            const price = parseFloat(match[1].replace(/,/g, ''));
-            console.log(`Found GoodReturns price: ${price}`);
-            return price;
-        }
-        return null;
-    } catch (e) {
-        console.error('GoodReturns scrape failed:', e.message);
-        return null;
-    }
-}
 
 /**
  * Get exchange rate from USD to target currency
@@ -264,54 +48,64 @@ async function getExchangeRate(from, to) {
 }
 
 /**
+ * Fetch Gold Price from Gold-API
+ * Returns price in USD per Gram
+ */
+async function fetchGoldPriceAPI() {
+    try {
+        console.log('Fetching gold price from api.gold-api.com...');
+        const url = 'https://api.gold-api.com/price/XAU';
+        const { data } = await axios.get(url, { timeout: 10000 });
+
+        // Response format: { "name": "Gold", "price": 2045.50, "symbol": "XAU", ... }
+        // Price is in USD per Troy Ounce (XAU standard)
+
+        if (data && data.price) {
+            console.log(`API XAU Price: $${data.price}`);
+            // Convert Ounce to Gram
+            // 1 Troy Ounce = 31.1034768 grams
+            const pricePerGram = data.price / 31.1035;
+            return pricePerGram;
+        }
+    } catch (error) {
+        console.error('Gold-API fetch failed:', error.message);
+    }
+    return null;
+}
+
+/**
  * Main orchestration function
  */
 async function fetchAndStorePrice() {
     console.log('Running fetchAndStorePrice job...');
     const targetCurrency = 'INR';
 
-    let priceUSDPerGram = await fetchGoldPriceUSD();
-    let localPrice = null;
+    // 1. Fetch USD Price
+    let priceUSDPerGram = await fetchGoldPriceAPI();
 
-    if (priceUSDPerGram) {
-        const rate = await getExchangeRate('USD', targetCurrency);
-        console.log(`Debug: Spot USD/g: ${priceUSDPerGram.toFixed(4)} | Rate: ${rate}`);
-
-        // Convert to local currency
-        localPrice = priceUSDPerGram * rate;
-
-        // Apply Digital Gold Premium (Only if derived from Spot USD)
-        // Default: 1.12 (12%) matching Indian Digital Gold standards
-        const digitalGoldPremium = parseFloat(process.env.INR_DIGITAL_GOLD_PREMIUM || '1.12');
-        if (targetCurrency === 'INR') {
-            localPrice = localPrice * digitalGoldPremium;
-        }
-
-    } else {
-        // Fallback to INR-specific sources (Google)
-        // Note: These usually include the premium/gst or are market rates, 
-        // unlike Spot USD. We might NOT apply the premium again if it's "Market Price".
-        // Let's assume Google gives market price (24k/22k). Ideally we want 24k.
-        console.log('USD sources failed. Trying INR sources...');
-        console.log('USD sources failed. Trying INR sources...');
-        let inrPrice = await fetchGoldPriceINR_Google();
-        if (!inrPrice) {
-            inrPrice = await fetchGoldPriceINR_GoodReturns();
-        }
-
-        if (inrPrice) {
-            localPrice = inrPrice;
-            console.log(`Debug: INR Source price: ${localPrice}`);
-        } else {
-            console.log('All external sources failed. Unable to fetch price.');
-            return; // Stop execution, do not save null/mock
-        }
+    if (!priceUSDPerGram) {
+        console.error('Failed to fetch gold price from API. Aborting.');
+        return;
     }
 
-    // Create timestamp
+    // 2. Get Exchange Rate
+    const rate = await getExchangeRate('USD', targetCurrency);
+    console.log(`Debug: Spot USD/g: ${priceUSDPerGram.toFixed(4)} | Rate: ${rate}`);
+
+    // 3. Convert to INR
+    let localPrice = priceUSDPerGram * rate;
+
+    // 4. Apply Premium (Digital Gold)
+    // Default: 1.12 (12%) matching Indian Digital Gold standards
+    if (targetCurrency === 'INR') {
+        const digitalGoldPremium = parseFloat(process.env.INR_DIGITAL_GOLD_PREMIUM || '1.12');
+        localPrice = localPrice * digitalGoldPremium;
+    }
+
+    // 5. Create timestamp
     const now = new Date();
 
-    // Store in DB
+    // 6. Store in DB
     try {
         const query = `
             INSERT INTO price_snapshots (metal, price, fetched_at)
@@ -324,7 +118,7 @@ async function fetchAndStorePrice() {
         console.error('DB Insert Error:', err.message);
     }
 
-    // Update Cache
+    // 7. Update Cache
     latestPriceCache = {
         metal: 'gold',
         price: parseFloat(localPrice.toFixed(2)),
@@ -333,7 +127,7 @@ async function fetchAndStorePrice() {
         updated_at: now.toISOString()
     };
 
-    // Evaluate Alerts
+    // 8. Evaluate Alerts
     try {
         await alertService.evaluateAlerts(latestPriceCache.price);
     } catch (err) {

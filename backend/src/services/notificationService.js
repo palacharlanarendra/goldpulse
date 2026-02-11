@@ -8,6 +8,11 @@ if (!admin.apps.length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
         try {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            // FIX: Replace escaped newlines with actual newlines
+            if (serviceAccount.private_key) {
+                // Handle both passed-in literal newlines and escaped newlines
+                serviceAccount.private_key = serviceAccount.private_key.split(String.raw`\n`).join('\n');
+            }
             credential = admin.credential.cert(serviceAccount);
             console.log('Firebase: Initialized with Environment Variable');
         } catch (error) {

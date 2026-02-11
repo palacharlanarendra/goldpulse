@@ -70,7 +70,7 @@ async function fetchGoldPriceUSD() {
                 return price / 31.1035;
             }
         } catch (e) {
-            console.log('Primary source failed, trying fallback...');
+            console.log('Primary source (GoldPrice.org) failed:', e.message);
         }
 
         // Fallback Source 1: Bullion-Rates (HTML)
@@ -79,7 +79,8 @@ async function fetchGoldPriceUSD() {
             const { data: data2 } = await axios.get(fallbackUrl, {
                 headers: {
                     'User-Agent': getRandomUserAgent()
-                }
+                },
+                timeout: 5000
             });
             const $2 = cheerio.load(data2);
             const body2 = $2('body').text();
@@ -88,7 +89,7 @@ async function fetchGoldPriceUSD() {
                 return parseFloat(matchFallback[1].replace(/,/g, '')) / 31.1035;
             }
         } catch (e) {
-            console.log('Fallback 1 failed...');
+            console.log('Fallback 1 (Bullion-Rates) failed:', e.message);
         }
 
         // Fallback Source 2: GoldPrice.org Data API (JSON)
@@ -106,7 +107,7 @@ async function fetchGoldPriceUSD() {
                 }
             }
         } catch (e) {
-            console.log('JSON source failed too.');
+            console.log('Fallback 2 (GoldPrice JSON) failed:', e.message);
         }
 
         // Fallback Source 3: LivePriceOfGold.com (HTML)
@@ -119,15 +120,17 @@ async function fetchGoldPriceUSD() {
                 timeout: 5000
             });
             const $3 = cheerio.load(data3);
+            // Select specific element if possible or regex body
             const body3 = $3('body').text();
-            const match3 = body3.match(/Gold Price per Ounce.*?\n.*?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
+            // Look for "Gold Price Per Ounce" ... number
+            const match3 = body3.match(/Gold Price Per Ounce.*?(\d{1,3}(?:,\d{3})*\.\d{2})/i);
             if (match3) {
-                const price = parseFloat(match3[1].replace(/,/g, ''));
-                return price / 31.1035;
+                return parseFloat(match3[1].replace(/,/g, '')) / 31.1035;
             }
         } catch (e) {
-            console.log('LivePriceOfGold source failed.');
+            console.log('Fallback 3 (LivePriceOfGold) failed:', e.message);
         }
+
 
         return null; // Return null to trigger INR fallback in main function
 
@@ -154,15 +157,11 @@ async function fetchGoldPriceINR_Google() {
             timeout: 6000
         });
 
-        // Regex to find price in INR. e.g. "₹ 6,500", "6,500.00", "7,200"
-        // Google snippets often have class "BNeawe" or show bold text.
-        // We look for patterns like "₹x,xxx" or "x,xxx Indian Rupee"
+        // Regex to find price in INR. e.g. "₹ 6,500", "6,500.00", "7,200", "Rs 6500"
 
-        // Generic regex for numbers after ₹
         const body = data;
-        // Search for "₹" followed by digits/commas
-        // Matches ₹ 6,850.00 or ₹6850
-        const matches = [...body.matchAll(/₹\s?(\d{1,3}(?:,\d{2,3})*(?:\.\d+)?)/g)];
+        // Search for "₹" or "Rs" or "INR" followed by digits/commas
+        const matches = [...body.matchAll(/(?:₹|Rs\.?|INR)\s?(\d{1,3}(?:,\d{2,3})*(?:\.\d+)?)/gi)];
 
         let candidates = [];
         for (const m of matches) {
@@ -171,8 +170,10 @@ async function fetchGoldPriceINR_Google() {
         }
 
         if (candidates.length === 0) {
-            // Try looking for "Gold Price" ... number
-            // Simplified fallback
+            console.log('Google Search: No currency matches found.');
+            // Limit log size and check type
+            const snippet = typeof body === 'string' ? body.substring(0, 500) : 'Body not string';
+            console.log('Snippet dump:', snippet);
             return null;
         }
 
@@ -195,6 +196,37 @@ async function fetchGoldPriceINR_Google() {
 
     } catch (e) {
         console.error('Google Search scrape failed:', e.message);
+        return null;
+    }
+}
+
+/**
+ * Scrape INR price from GoodReturns.in (Backup)
+ */
+async function fetchGoldPriceINR_GoodReturns() {
+    try {
+        console.log('Attempting to fetch INR price from GoodReturns...');
+        const url = 'https://www.goodreturns.in/gold-rates/india.html';
+        const { data } = await axios.get(url, {
+            headers: {
+                'User-Agent': getRandomUserAgent()
+            },
+            timeout: 6000
+        });
+
+        const $ = cheerio.load(data);
+        const bodyText = $('body').text().replace(/\s+/g, ' ');
+
+        // Regex: 24 Carat Gold ... 1 Gram ... ₹ 7,xxx
+        const match = bodyText.match(/24 Carat Gold.*?1 Gram.*?₹\s*([\d,]+)/i);
+        if (match) {
+            const price = parseFloat(match[1].replace(/,/g, ''));
+            console.log(`Found GoodReturns price: ${price}`);
+            return price;
+        }
+        return null;
+    } catch (e) {
+        console.error('GoodReturns scrape failed:', e.message);
         return null;
     }
 }
@@ -261,16 +293,18 @@ async function fetchAndStorePrice() {
         // unlike Spot USD. We might NOT apply the premium again if it's "Market Price".
         // Let's assume Google gives market price (24k/22k). Ideally we want 24k.
         console.log('USD sources failed. Trying INR sources...');
-        const inrPrice = await fetchGoldPriceINR_Google();
+        console.log('USD sources failed. Trying INR sources...');
+        let inrPrice = await fetchGoldPriceINR_Google();
+        if (!inrPrice) {
+            inrPrice = await fetchGoldPriceINR_GoodReturns();
+        }
+
         if (inrPrice) {
             localPrice = inrPrice;
             console.log(`Debug: INR Source price: ${localPrice}`);
         } else {
-            // Final Mock Fallback
-            console.log('All external sources failed. Using Mock Price.');
-            // Mock: $2300/oz * rate * premium
-            // Approx 7200 INR
-            localPrice = 7200;
+            console.log('All external sources failed. Unable to fetch price.');
+            return; // Stop execution, do not save null/mock
         }
     }
 

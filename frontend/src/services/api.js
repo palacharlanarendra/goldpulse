@@ -33,7 +33,8 @@ export const createAlert = async (targetPrice, deviceToken, direction = null) =>
 export const deleteAlert = async (alertId, deviceToken) => {
     try {
         const response = await api.delete(`/alerts/${alertId}`, {
-            params: { device_token: deviceToken }
+            params: { device_token: deviceToken },
+            data: { device_token: deviceToken }
         });
         return response.data;
     } catch (error) {

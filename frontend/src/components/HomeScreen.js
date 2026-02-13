@@ -54,9 +54,7 @@ const HomeScreen = ({
                             <AlertStatus
                                 key={alert.id}
                                 alert={alert}
-                                currentPrice={currentPrice}
                                 onCancel={onCancelAlert}
-                                onSetNew={onSetAlert}
                             />
                         ))
                     ) : (
@@ -88,7 +86,7 @@ const styles = StyleSheet.create({
     logoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start', // ALIGN LEFT
         marginBottom: 20,
     },
     logo: {

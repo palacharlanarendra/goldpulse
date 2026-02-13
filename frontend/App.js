@@ -5,26 +5,34 @@ import SetAlertScreen from './src/components/SetAlertScreen';
 import { getLatestPrice, createAlert, getAlerts, deleteAlert } from './src/services/api';
 import { requestUserPermission, getFCMToken, createNotificationListeners } from './src/services/notifications';
 
+import CustomAlert from './src/components/CustomAlert';
+
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState('HOME'); // HOME, SET_ALERT
+  const [currentScreen, setCurrentScreen] = useState('HOME');
   const [priceData, setPriceData] = useState(null);
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deviceToken, setDeviceToken] = useState(null);
 
+  // Custom Alert State
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: '', message: '', type: 'info' });
+
+  const showAlert = (title, message, type = 'info') => {
+    setAlertConfig({ title, message, type });
+    setAlertVisible(true);
+  };
+
   const init = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Setup Notifications
       await requestUserPermission();
       const token = await getFCMToken();
       setDeviceToken(token);
-
-      // 2. Fetch Data
       await fetchData(token);
     } catch (error) {
       console.error("Init error:", error);
-      Alert.alert("Error", "Failed to initialize app. Please check your connection.");
+      showAlert("Error", "Failed to initialize app. Please check your connection.", 'error');
     } finally {
       setLoading(false);
     }
@@ -37,7 +45,6 @@ const App = () => {
 
       if (token) {
         const alerts = await getAlerts(token);
-        // Backend now allows multiple alerts
         if (alerts) {
           setActiveAlerts(alerts);
         } else {
@@ -51,7 +58,6 @@ const App = () => {
 
   useEffect(() => {
     init();
-    // Setup all notification listeners
     const unsubscribe = createNotificationListeners();
     return () => {
       unsubscribe();
@@ -60,18 +66,18 @@ const App = () => {
 
   const handleCreateAlert = async (targetPrice, direction) => {
     if (!deviceToken) {
-      Alert.alert("Error", "Notification permission required to set alerts.");
+      showAlert("Error", "Notification permission required to set alerts.", 'error');
       return;
     }
 
     setLoading(true);
     try {
       await createAlert(targetPrice, deviceToken, direction);
-      await fetchData(); // Refresh to get the new alert
+      await fetchData();
       setCurrentScreen('HOME');
-      Alert.alert("Success", "Price alert created!");
+      showAlert("Success", "Price alert created!", 'success');
     } catch (error) {
-      Alert.alert("Error", "Failed to create alert. Please try again.");
+      showAlert("Error", "Failed to create alert. Please try again.", 'error');
     } finally {
       setLoading(false);
     }
@@ -83,12 +89,16 @@ const App = () => {
     setLoading(true);
     try {
       await deleteAlert(alertId, deviceToken);
-      // Optimistically update or re-fetch
       setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
-      Alert.alert("Success", "Alert removed.");
-      await fetchData(); // Refresh to be sure
+      // Removed "Alert removed" success message as per request to make it simple/frictionless
+      // or we can keep it but user wanted "Remove" checks
+      // Let's keep it but make it non-intrusive? 
+      // User said "Notifications / errors we were getting in grey color model , instead of that make sure it matches with app UI"
+      // If I show a success modal for every remove, it might be annoying.
+      // But let's follow the standard pattern for now.
+      await fetchData();
     } catch (error) {
-      Alert.alert("Error", "Failed to remove alert.");
+      showAlert("Error", "Failed to remove alert.", 'error');
     } finally {
       setLoading(false);
     }
@@ -133,6 +143,14 @@ const App = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       {renderScreen()}
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertVisible(false)}
+      />
     </SafeAreaView>
   );
 };

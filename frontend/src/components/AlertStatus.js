@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 
-const AlertStatus = ({ alert, currentPrice, onCancel, onSetNew }) => {
+const AlertStatus = ({ alert, onCancel }) => {
     const [loading, setLoading] = useState(false);
 
     if (!alert) return null;
@@ -9,163 +9,127 @@ const AlertStatus = ({ alert, currentPrice, onCancel, onSetNew }) => {
     const isTriggered = alert.triggered;
     const direction = alert.direction || 'BELOW';
 
-    const handleCancel = () => {
-        if (isTriggered) {
-            // For triggered alerts, just remove them without scary confirmation
-            performCancel();
-        } else {
-            Alert.alert(
-                "Delete Alert?",
-                "Are you sure you want to delete this alert?",
-                [
-                    { text: "No", style: "cancel" },
-                    { text: "Yes, Delete", style: "destructive", onPress: performCancel }
-                ]
-            );
-        }
-    };
-
-    const performCancel = async () => {
+    const handleRemove = async () => {
         setLoading(true);
         await onCancel(alert.id);
         setLoading(false);
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.label}>Target Price ({direction})</Text>
-                    <Text style={styles.price}>₹{alert.target_price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+        <View style={styles.card}>
+            {/* Left Side: Info */}
+            <View style={styles.infoContainer}>
+                <View style={styles.row}>
+                    <Text style={styles.targetLabel}>Target:</Text>
+                    <Text style={styles.targetPrice}>
+                        ₹{Number(alert.target_price).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </Text>
                 </View>
-                {/* 
-                  Optional: Display direction icon or text clearly. 
-                  Included in label above for simplicity. 
-                */}
-            </View>
-
-            <View style={[styles.badge, isTriggered ? styles.triggered : styles.active]}>
-                <Text style={styles.badgeText}>
-                    {isTriggered ? 'ALERT TRIGGERED' : 'ACTIVE'}
+                <Text style={styles.conditionText}>
+                    {isTriggered
+                        ? `Triggered (${direction.toLowerCase()})`
+                        : `When price goes ${direction.toLowerCase()}`}
                 </Text>
             </View>
 
-            <Text style={styles.message}>
-                {isTriggered
-                    ? `Price reached target ${direction.toLowerCase()} ₹${Number(alert.target_price).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-                    : `You'll be notified when price goes ${direction.toLowerCase()}`}
-            </Text>
-
-            {isTriggered ? (
-                // If triggered, we can just delete/dismiss it or set new.
-                // For now, let's allow "Set New" which probably just opens the modal, 
-                // AND a "Dismiss" to remove it from list? 
-                // Req: "allow multiple alerts".
-                // Triggered alerts stay in history? 
-                // "Actions: Cancel alert".
-                // Let's assume triggered alerts are just informational until removed?
-                // Or maybe they should be removed automatically?
-                // Provide a "Remove" button for triggered alerts.
-                <View style={styles.actions}>
-                    <TouchableOpacity style={[styles.button, styles.removeButton]} onPress={handleCancel} disabled={loading}>
-                        {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.buttonText}>Remove</Text>}
+            {/* Right Side: Action */}
+            <View style={styles.actionContainer}>
+                {isTriggered ? (
+                    <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={handleRemove}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.removeButtonText}>Remove</Text>
+                        )}
                     </TouchableOpacity>
-                </View>
-            ) : (
-                <TouchableOpacity style={styles.cancelButton} onPress={handleCancel} disabled={loading}>
-                    {loading ? <ActivityIndicator color="#d32f2f" size="small" /> : <Text style={styles.cancelText}>Cancel Alert</Text>}
-                </TouchableOpacity>
-            )}
+                ) : (
+                    <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={handleRemove}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#d32f2f" />
+                        ) : (
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        )}
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    card: {
         backgroundColor: '#fff',
         borderRadius: 12,
         padding: 16,
-        marginVertical: 10,
-        elevation: 2,
+        marginBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        elevation: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.05,
         shadowRadius: 2,
-        borderWidth: 1,
-        borderColor: '#eee'
     },
-    header: {
+    infoContainer: {
+        flex: 1,
+    },
+    row: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'baseline',
-        marginBottom: 12,
-    },
-    label: {
-        fontSize: 12,
-        color: '#666',
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
         marginBottom: 4,
     },
-    price: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    badge: {
-        alignSelf: 'flex-start',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 16,
-        marginBottom: 12,
-    },
-    active: {
-        backgroundColor: '#e3f2fd',
-    },
-    triggered: {
-        backgroundColor: '#ffebee',
-    },
-    badgeText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    message: {
+    targetLabel: {
         fontSize: 14,
-        color: '#444',
-        marginBottom: 16,
+        color: '#666',
+        marginRight: 6,
     },
-    actions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
+    targetPrice: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1a1a1a',
     },
-    button: {
-        backgroundColor: '#1a1a1a',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignItems: 'center',
+    conditionText: {
+        fontSize: 12,
+        color: '#888',
+    },
+    actionContainer: {
         marginLeft: 10,
     },
     removeButton: {
-        backgroundColor: '#666',
+        backgroundColor: '#1a1a1a',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
     },
-    buttonText: {
+    removeButtonText: {
         color: '#fff',
+        fontSize: 12,
         fontWeight: 'bold',
-        fontSize: 14,
     },
     cancelButton: {
-        padding: 12,
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-        marginTop: 8,
+        backgroundColor: '#fff',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#eee',
     },
-    cancelText: {
+    cancelButtonText: {
         color: '#d32f2f',
-        fontWeight: '500',
-    },
+        fontSize: 12,
+        fontWeight: '600',
+    }
 });
 
 export default AlertStatus;

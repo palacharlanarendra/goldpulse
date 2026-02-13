@@ -121,7 +121,8 @@ app.get('/alerts', async (req, res) => {
 // DELETE /alerts/:id
 app.delete('/alerts/:id', async (req, res) => {
     const { id } = req.params;
-    const { device_token } = req.body; // Pass token in body to auth user
+    // Accept token from body (legacy) or query (standard)
+    const device_token = req.body.device_token || req.query.device_token;
 
     if (!device_token) {
         return res.status(400).json({ status: 'error', message: 'device_token required' });

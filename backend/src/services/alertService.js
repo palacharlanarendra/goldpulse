@@ -84,11 +84,22 @@ async function getUserAlerts(userId) {
  * Delete (cancel) an alert
  */
 async function deleteAlert(alertId, userId) {
-    const res = await db.query(
-        'DELETE FROM alerts WHERE id = $1 AND user_id = $2 RETURNING id',
-        [alertId, userId]
-    );
-    return res.rows.length > 0;
+    try {
+        await db.query('BEGIN');
+        // First delete associated triggers to satisfy foreign key constraint
+        await db.query('DELETE FROM alert_triggers WHERE alert_id = $1', [alertId]);
+
+        const res = await db.query(
+            'DELETE FROM alerts WHERE id = $1 AND user_id = $2 RETURNING id',
+            [alertId, userId]
+        );
+
+        await db.query('COMMIT');
+        return res.rows.length > 0;
+    } catch (error) {
+        await db.query('ROLLBACK');
+        throw error;
+    }
 }
 
 /**

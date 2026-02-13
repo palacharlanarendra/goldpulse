@@ -39,6 +39,10 @@ export const deleteAlert = async (alertId, deviceToken) => {
         return response.data;
     } catch (error) {
         console.error("Error deleting alert:", error);
+        if (error.response) {
+            console.error("Server Error Data:", error.response.data);
+            console.error("Server Error Status:", error.response.status);
+        }
         throw error;
     }
 };

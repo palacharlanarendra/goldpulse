@@ -120,26 +120,39 @@ app.get('/alerts', async (req, res) => {
 
 // DELETE /alerts/:id
 app.delete('/alerts/:id', async (req, res) => {
+    console.log('--- DELETE REQUEST START ---');
+    console.log('Params:', req.params);
+    console.log('Query:', req.query);
+    console.log('Body:', req.body);
+
     const { id } = req.params;
     // Accept token from body (legacy) or query (standard)
     const device_token = req.body.device_token || req.query.device_token;
+    console.log('Extracted device_token:', device_token);
 
     if (!device_token) {
+        console.log('ERROR: Device token missing');
         return res.status(400).json({ status: 'error', message: 'device_token required' });
     }
 
     try {
         const userId = await alertService.createOrGetUser(device_token);
+        console.log('Resolved userId:', userId);
+
         const success = await alertService.deleteAlert(id, userId);
+        console.log(`Delete operation result for alert ${id}:`, success);
 
         if (success) {
             res.json({ status: 'success', message: 'Alert deleted' });
         } else {
+            console.log(`Alert ${id} not found or unauthorized for user ${userId}`);
             res.status(404).json({ status: 'error', message: 'Alert not found or unauthorized' });
         }
     } catch (err) {
         console.error('Delete alert error:', err);
-        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+        res.status(500).json({ status: 'error', message: 'Internal Server Error: ' + err.message });
+    } finally {
+        console.log('--- DELETE REQUEST END ---');
     }
 });
 

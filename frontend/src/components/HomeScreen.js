@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'flex-start', // ALIGN LEFT
         marginBottom: 20,
+        marginTop: 8, // Added 0.5rem spacing
     },
     logo: {
         width: 40,

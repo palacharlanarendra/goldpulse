@@ -120,7 +120,8 @@ const styles = StyleSheet.create({
     innerContainer: {
         flex: 1,
         padding: 20,
-        justifyContent: 'center',
+        paddingTop: 60, // Move content to top
+        justifyContent: 'flex-start', // Align to top
     },
     title: {
         fontSize: 24,

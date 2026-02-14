@@ -1,7 +1,7 @@
 module.exports = {
     project: {
         android: {
-            packageName: 'com.narendrapalach.mobile',
+            packageName: 'com.goldprice.india.alerts',
         },
     },
 };

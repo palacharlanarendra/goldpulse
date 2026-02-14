@@ -7,28 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1039559068389:android:cb1051c57c33d928dd620c",
-        "android_client_info": {
-          "package_name": "com.goldprice.india.alerts"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBNhQhXTQZ4uw7EDeB3waNsuEHtl6Rl7UU"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:1039559068389:android:bbbb7dcda9918c25dd620c",
         "android_client_info": {
-          "package_name": "com.narendrapalach.mobile"
+          "package_name": "com.goldprice.india.alerts"
         }
       },
       "oauth_client": [],

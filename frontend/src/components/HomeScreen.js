@@ -20,7 +20,7 @@ const HomeScreen = ({
                         source={require('../assets/logo.png')}
                         style={styles.logo}
                     />
-                    <Text style={styles.appName}>GoldPulse</Text>
+                    <Text style={styles.appName}>Gold Price Today</Text>
                 </View>
 
                 <View style={styles.priceContainer}>

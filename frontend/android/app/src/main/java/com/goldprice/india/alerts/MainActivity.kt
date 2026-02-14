@@ -1,4 +1,4 @@
-package com.narendrapalach.mobile
+package com.goldprice.india.alerts
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
